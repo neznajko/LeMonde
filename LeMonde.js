@@ -45,17 +45,17 @@ function getTanks() {
     var button     = cons("input");
     button.type    = "button";
     button.value   = "Gou";
-    button.onclick = justGou;
+    button.onclick = JustGou;
     document.body.appendChild(button);  
 }
 ////////////////////////////////////////////////////////
-function justGou() {
-    console.log("just Gou");
+function JustGou() {
     for (let j = 0; j < TANKZ; j++) {
-        CAP.push((Id("cap" + j).value));
-        CON.push((Id("con" + j).value));
+        CAP[j] = parseInt(Id("cap" + j).value);
+        CON[j] = parseInt(Id("con" + j).value);
     }
     dump();
+    wtf2();
 }
 ////////////////////////////////////////////////////////
 var dump = () => {
@@ -72,7 +72,8 @@ class Tank {
         this.cap  = cap;
         this.con  = con;
         this.days = cap/ con;
-        this.par  = par; // parent tanks
+        this.par  = par;
+        this.stk  = [];
     }
     toString() {
         return ("( " + this.cap +
@@ -164,10 +165,12 @@ function backtrack(n) {
 ////////========        >>>>>>>>^^^^^^^^________````````
 ////////////////////////////////////////////////////////
 /*     *       *       *       *       *       *      */
-/** */
-function consTanks() {
-    var bf = [];
-    for (let j = 0; j < TANKZ; j++) {
+/** + idx: index list
+  * - genTankGrps
+  */
+function ConsTanks(idx) {
+    var bf = []; // buffer
+    for (const j of idx) {
         bf.push(new Tank(CAP[j], CON[j]));
     }
     return bf;
@@ -218,44 +221,51 @@ function gredux(tk, ps) {
 }
 ////////////////////////////////////////////////////////
 /*     *       *       *       *       *       *      */
-/** forward search */
+/** forward search
+  * tk - tank list
+  * Ok, backtrack iiz generating all tk pairings and
+  * gredux and redux are reducing each pair to a single
+  * tank, vhich iz a tree process, than the last tank is
+  * checked vhether it is capable to cross the goal line
+  * Here all units are at full capacity. Than if there
+  * is a solution, this tree is used as a template and
+  * forest procedure is searching for minimum total
+  * capacity (plz ignore any bugs coz there are lot).
+  */
 function LeMonde(tk) {
     var n = tk.length; /* number of tanks */
-    if (n == 2) {
+    if (n === 2) {
         var T = redux(tk[0], tk[1]);
-        if (T.days >= DAYS) {
-            STK.push(T);
-        }
-    } else {
-        var bf = backtrack(n + oddq(n)); // pairings
-        for (const ps of bf) {
+        if( T.days >= DAYS<< 1 ){ STK.push(T); }}
+    else {
+        n += oddq(n);
+        for (const ps of backtrack(n)) {
             LeMonde(gredux(tk, ps));
-        }       
-    }
-}
+        }}}
 ////////        ))))))))--------@@@@@@@@........""""""""
 ////////////////////////////////////////////////////////
 /*     *       *       *       *       *       *      */
-var Cont;
-/** Count template tree nodes. */
-function _cont(root) {
-    if( root.par.length !== 0 ){
-        Cont += 2;
-        _cont(root.par[0]);
-        _cont(root.par[1]);
+/** */
+var Total;
+function _total(T) {
+    var par = T.par;
+    if( par.length === 0 ){
+        Total += T.cap;
+    } else {
+        _total(par[0]);
+        _total(par[1]);
     }
 }
-function cont(root) {
-    Cont = 0;
-    _cont(root);
-    return Cont;
+function total(T) {
+    Total = 0;
+    _total(T);
+    return Total;
 }
 ////////-------->>>>>>>>::::::::<<<<<<<<========\\\\\\\\
 ////////////////////////////////////////////////////////
 /*     *       *       *       *       *       *      */
 /** */
 function fork(T) {
-    if( T.par.length === 0 ) return [];
     var R1 = T.cap;
     var r  = T.par[0].con;
     var c  = T.par[1].con;
@@ -274,32 +284,34 @@ function fork(T) {
 ////////________````````========>>>>>>>>''''''''""""""""
 ////////////////////////////////////////////////////////
 /*     *       *       *       *       *       *      */
-var Vzit = 0;
-var Root;
-var Aux;
 /** H A C K I N G Z O N E */
-function _forest(root) {
-    var bf = fork(root);
-    for (const p of bf) {
-        let L = root.par[0];
-        let R = root.par[1];
-        L.cap = p[0];
-        R.cap = p[1];
-        Vzit += 2;
-        if( Vzit == Cont ){
-            Aux.push(copy(Root));
-        }
-        _forest(L);
-        _forest(R);
-        Vzit -= 2;
+var Overflow = false;
+function forest(T) {
+    if( T.par.length === 0 ){ // <<neva use evil twins""
+        return; /* Terminal nodè */
     }
+    if( T.stk.length === 0 ){ // empty2
+        T.stk = fork(T);
+        if( T.stk.length === 0 ){ 
+            Overflow = true;
+            return;
+        }
+    }
+    var R = T.par[0]; // Parent Runner
+    var C = T.par[1]; // Parent Carrier
+    if( R.stk.length === 0 && C.stk.length === 0 ){
+        let p = T.stk.shift();
+        R.cap = p[0];
+        C.cap = p[1];
+    }
+    forest(R);
+    forest(C);
 }
-function forest(root) {
-    Root = copy(root);
-    Aux = [];
-    Cont = cont(root);
-    _forest(Root);
-    return Aux[0];
+var hack = T => {
+    do {
+        Overflow = false;
+        forest(T);
+    } while (Overflow);
 }
 ////////========********////////________````````''''''''
 ////////////////////////////////////////////////////////
@@ -329,27 +341,50 @@ function dmp(root) {
 ////////////////////////////////////////////////////////
 /*     *       *       *       *       *       *      */
 /** tesT Zøne */
-var tezt = () => {
-    TANKZ = 3;
-    DAYS  = 4;
-    CAP   = [5, 7, 8];
-    CON   = [1, 1, 2];
-    tk    = consTanks();
+var ck = idx => {
+    var tk = ConsTanks(idx);
+    STK.length = 0;
     LeMonde(tk);
-    console.log(STK[0]);
-    dmp(STK[0]);
-    dmp(forest(STK[0]));
+    for (let j = 0; j < STK.length; j++) {
+        // target capacity
+        let tar = 2 *DAYS* STK[j].con;
+        let cp = geropt(STK[j], tar);
+        if( cp.cap === tar ){ return cp; }
+    }
+    return -1;
 }
-var _es_ = () => {
-    var a = new Tank(0, 1);         // c
-    var b = new Tank(0, 1);         // r
-    var c = new Tank(0, 1, [b, a]); // r
-    var d = new Tank(0, 2);         // c
-    var e = new Tank(0, 1, [c, d]); // r
-    e.cap = 8;
-    dmp(forest(e));
+var geropt = (T, tar) => {
+    var cp   = copy(T);
+    var orig = cp.cap; // backup
+    for (let cap = tar; cap <= orig; cap++) {
+        cp.cap = cap;
+        hack(cp);
+        if( Overflow === false ) break;
+    }
+    return cp;    
 }
 ////////````````""""""""********........--------&&&&&&&&
 /////////////////////////////////////////////////// log:
 // Boom boom
-tezt();
+////////////////////////////////////////////////////////
+/*     *       *       *       *       *       *      */
+/** - Ö W-H-AT-THE-F-A-A-A-A-A-A-A-A-A-K2
+  */
+var wtf2 = () => {
+    TANKZ = 3;
+    DAYS  = 4;
+    CAP   = [5, 7, 8];
+    CON   = [1, 1, 2];
+    var bf = genTankGrps(); // index subsets
+    for (const idx of bf) {
+        console.log(idx);
+        let party = ck(idx);
+        if( party === -1 ){
+            console.log(':)');
+        } else {
+            dmp(party);
+        }
+    }
+}
+////////========________>>>>>>>>````````,,,,,,,,////////
+wtf2();
