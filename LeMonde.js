@@ -1,5 +1,5 @@
 ////////////////////////////////////////////////////////
-console.log("Hello Mont!");
+console.log("Hello LeMonde!");
 var TANKZ = 0;  // number of climbers
 var DAYS  = 0;  // what is this?
 var CAP   = []; // reservoir capacity
@@ -50,6 +50,7 @@ function getTanks() {
 }
 ////////////////////////////////////////////////////////
 function JustGou() {
+    DAYS = parseInt(Id("days").value, 10);
     for (let j = 0; j < TANKZ; j++) {
         CAP[j] = parseInt(Id("cap" + j).value);
         CON[j] = parseInt(Id("con" + j).value);
@@ -74,6 +75,7 @@ class Tank {
         this.days = cap/ con;
         this.par  = par;
         this.stk  = [];
+        this.car  = cap; // backup
     }
     toString() {
         return ("( " + this.cap +
@@ -245,23 +247,47 @@ function LeMonde(tk) {
 ////////        ))))))))--------@@@@@@@@........""""""""
 ////////////////////////////////////////////////////////
 /*     *       *       *       *       *       *      */
-/** */
-var Total;
-function _total(T) {
-    var par = T.par;
-    if( par.length === 0 ){
-        Total += T.cap;
+var Term = [];
+/** get terminal nodes */
+function _getterm_(root)
+////////--------''''''''________========"""""""">>>>>>>>
+{
+    if( root.par.length === 0 ){
+        Term.push(root);
     } else {
-        _total(par[0]);
-        _total(par[1]);
+        _getterm_(root.par[0]);
+        _getterm_(root.par[1]);
     }
 }
-function total(T) {
-    Total = 0;
-    _total(T);
-    return Total;
+function getterm(root)
+////////********________''''''''========>>>>>>>>""""""""
+{
+    Term.length = 0;     //              > clear
+    _getterm_(root);     //              > fill Term
+    return Term.slice(); //              > return a copy
 }
+////////////////////////////////////////////////////////
+/*     *       *       *       *       *       *      */
+/** dump terminal nodes */
+function dmpterm(term)
+////////-------->>>>>>>>````````________''''''''........
+{   var str = '';
+    for (const n of term) {
+        str += (n + ' ');
+    }
+    console.log(str);
+}
+////////////////////////////////////////////////////////
+/*     *       *       *       *       *       *      */
+/** get total group capacity */
+function gettotal(term)
 ////////-------->>>>>>>>::::::::<<<<<<<<========\\\\\\\\
+{   var total = 0;
+    for (const n of term) {
+        total += n.cap;
+    }
+    return total;
+}
 ////////////////////////////////////////////////////////
 /*     *       *       *       *       *       *      */
 /** */
@@ -274,6 +300,7 @@ function fork(T) {
     var R, dR, dS;
     for (let S = _;; S++) {
         R = R1 - r* Math.floor(S /_);
+        if( R > T.par[0].car ){ continue; } // :)
         dR = R/ r;
         dS = S /c;
         if (dS > dR) break;
@@ -328,18 +355,6 @@ function copy(root) {
 ////////%%%%%%%%????????%%%%%%%%||||||||00000000--------
 ////////////////////////////////////////////////////////
 /*     *       *       *       *       *       *      */
-/** Dump terminal nodes */
-function dmp(root) {
-    if( root.par.length === 0 ){
-        console.log("" + root);
-        return;
-    }
-    dmp(root.par[0]);
-    dmp(root.par[1]);
-}
-////////-------->>>>>>>>````````________''''''''........
-////////////////////////////////////////////////////////
-/*     *       *       *       *       *       *      */
 /** tesT Zøne */
 var ck = idx => {
     var tk = ConsTanks(idx);
@@ -365,26 +380,40 @@ var geropt = (T, tar) => {
 }
 ////////````````""""""""********........--------&&&&&&&&
 /////////////////////////////////////////////////// log:
-// Boom boom
+// > @fork: { bug #f012 }
 ////////////////////////////////////////////////////////
 /*     *       *       *       *       *       *      */
 /** - Ö W-H-AT-THE-F-A-A-A-A-A-A-A-A-A-K2
   */
 var wtf2 = () => {
-    TANKZ = 3;
-    DAYS  = 4;
-    CAP   = [5, 7, 8];
-    CON   = [1, 1, 2];
     var bf = genTankGrps(); // index subsets
+    var grp;
+    var mtotal = Infinity; //            > minimum total
+    var mtanks = Infinity; //            > minimum tanks
+    var mgrp   = null;     //            > :)
+    var midx   = [];       //            > yeah!
+    var mterm  = [];       //            > wow?
     for (const idx of bf) {
         console.log(idx);
-        let party = ck(idx);
-        if( party === -1 ){
-            console.log(':)');
-        } else {
-            dmp(party);
-        }
-    }
+        if(( grp = ck(idx)) === -1 ){
+            console.log(':)'); }
+        else {
+            let term = getterm(grp),
+                total = gettotal(term);
+            if( total <= mtotal &&
+                term.length < mtanks ){
+                mtotal = total;
+                mtanks = term.length;
+                mgrp = grp;
+                midx = idx;
+                mterm = term;
+            }
+            dmpterm(term);
+            console.log(total);
+        }}
+    console.log("BHuMaHue:");
+    console.log(midx);
+    console.log(mgrp);
+    dmpterm(mterm);
 }
 ////////========________>>>>>>>>````````,,,,,,,,////////
-wtf2();
